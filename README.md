@@ -2,6 +2,8 @@
 
 [English](README.md) | [中文](README.zh.md)
 
+> **This is the macOS edition** (published as `dsh-plugin-wallpaper-engine-mac`) — built around **WaifuX** on macOS. Windows users should install the upstream [dsh-plugin-wallpaper-engine](https://github.com/elysia395/dsh-wallpaper-engine).
+
 A DSH bundle that turns your **Wallpaper Engine** wallpapers into the **background of the DSH web GUI** (`dsh web`).
 
 It discovers the wallpapers on your machine (WaifuX on macOS, Wallpaper Engine on Windows), lists them, and renders video/still wallpapers behind the DSH chat interface with an iOS-style **liquid glass** effect. You pick the wallpaper from a settings row, fine-tune it with four sliders, and pause/clear it anytime.
@@ -62,7 +64,8 @@ rotation candidates — they cannot be used as a live background here.
 If you simply want to use the plugin, install the published package from npm:
 
 ```sh
-dsh plugin --profile web add dsh-plugin-wallpaper-engine
+# macOS edition — the package this repo publishes
+dsh plugin --profile web add dsh-plugin-wallpaper-engine-mac
 ```
 
 Then restart `dsh web` and open **Settings → General → Wallpaper Engine**.

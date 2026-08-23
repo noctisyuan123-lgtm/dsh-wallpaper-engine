@@ -104,7 +104,8 @@ the picker.
 If you simply want to use the plugin, install the published package from npm:
 
 ```sh
-dsh plugin --profile web add dsh-plugin-wallpaper-engine
+# macOS edition — the package this repo publishes
+dsh plugin --profile web add dsh-plugin-wallpaper-engine-mac
 ```
 
 Then restart `dsh web` and open **Settings → Wallpaper Engine**.

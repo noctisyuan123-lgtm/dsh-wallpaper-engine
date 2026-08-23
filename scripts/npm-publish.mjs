@@ -18,6 +18,26 @@ for (const f of ['cordis.patch.yml', 'README.md', 'README.zh.md']) {
   cpSync(root + f, out + f);
 }
 
+// The tarball is published as the -mac fork, but the loader entry name and the
+// browser bundle's module id still reference the upstream package name — DSH
+// then fails to import the loader ("Cannot find package") and the bundle loads
+// without registering. Rewrite both in staging so the whole package is
+// self-consistent. READMEs get their title and install command pointed at the
+// -mac package too; descriptive mentions of the upstream name are left as-is.
+const REPO_NAME = 'dsh-plugin-wallpaper-engine';
+const PUB_NAME = REPO_NAME + '-mac';
+const rewrite = (file, f) => writeFileSync(out + file, f(readFileSync(out + file, 'utf8')));
+
+rewrite('cordis.patch.yml', (s) => s.replaceAll(REPO_NAME, PUB_NAME));
+rewrite('lib/client.js', (s) => s.replaceAll(REPO_NAME, PUB_NAME));
+for (const f of ['README.md', 'README.zh.md']) {
+  rewrite(f, (s) =>
+    s
+      .replace(new RegExp(`^# ${REPO_NAME}$`, 'm'), `# ${PUB_NAME}`)
+      .replace(new RegExp(`(dsh plugin --profile \\w+ add )${REPO_NAME}(?!-)`, 'g'), `$1${PUB_NAME}`),
+  );
+}
+
 const pkg = JSON.parse(readFileSync(root + 'package.json', 'utf8'));
 writeFileSync(out + 'package.json', JSON.stringify({
   name: 'dsh-plugin-wallpaper-engine-mac',

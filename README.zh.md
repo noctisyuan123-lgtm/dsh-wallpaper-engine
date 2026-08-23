@@ -2,6 +2,8 @@
 
 [English](README.md) | [中文](README.zh.md)
 
+> **这是 macOS 版**（发布包名 `dsh-plugin-wallpaper-engine-mac`），专为 macOS 的 **WaifuX** 壁纸打造。Windows 用户请安装上游的 [dsh-plugin-wallpaper-engine](https://github.com/elysia395/dsh-wallpaper-engine)。
+
 一个 DSH bundle，把你电脑上的 **Wallpaper Engine** 壁纸变成 **DSH 网页界面（`dsh web`）的背景**。
 
 它会自动发现你本机的壁纸（macOS 读 WaifuX、Windows 读 Wallpaper Engine），列出你的壁纸，并把动态视频 / 图片渲染到 DSH 对话界面的后方，配以 **iOS 风格液态玻璃**效果。你可以在设置里挑选壁纸、用四个滑动条微调，也能随时暂停或关闭。
@@ -61,7 +63,8 @@ Wallpaper Engine 的壁纸分四种类型：
 如果你只是想用这个插件，直接装 npm 上已发布的包即可：
 
 ```sh
-dsh plugin --profile web add dsh-plugin-wallpaper-engine
+# macOS 版（本仓库发布的包名）
+dsh plugin --profile web add dsh-plugin-wallpaper-engine-mac
 ```
 
 装完重启 `dsh web`，打开 **设置 → General → Wallpaper Engine** 就能用。
