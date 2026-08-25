@@ -1681,7 +1681,7 @@ const cardThumb = (w) => w.preview
 // `key` is only needed when a SliderRow sits inside a conditionally-rendered
 // ARRAY (the sidebar-glass group) — React requires keys there.
 function SliderRow(label, min, max, step, value, onInput, suffix, key) {
-  return React.createElement("div", { className: "we-picker__row we-picker__slider-row", key: key },
+  return React.createElement("div", { className: "we-picker__row we-picker__slider-row we-picker__field-row", key: key },
     React.createElement("span", { className: "we-picker__hint we-picker__label" }, label),
     React.createElement("input", {
       className: "we-picker__slider", type: "range",
@@ -2039,11 +2039,11 @@ function WallpaperPicker(props) {
     // ── 外观 (liquid-glass theming): 配色 presets + custom color, and the
     //    glass 透明度 slider. Applied instantly via --we-accent /
     //    --we-glass-alpha (applyEffects), persisted in localStorage. ──
-    React.createElement("div", { className: "we-picker__section" },
+    React.createElement("div", { className: "we-picker__section we-picker__section--appearance" },
       React.createElement("div", { className: "we-picker__section-head" },
         React.createElement("span", { className: "we-picker__section-label" }, "外观"),
       ),
-      React.createElement("div", { className: "we-picker__row we-picker__accent-row" },
+      React.createElement("div", { className: "we-picker__row we-picker__accent-row we-picker__swatch-row" },
         React.createElement("span", { className: "we-picker__hint we-picker__label" }, "配色"),
         ACCENT_PRESETS.map((hex) => React.createElement("button", {
           key: hex,
@@ -2068,7 +2068,7 @@ function WallpaperPicker(props) {
       // 玻璃颜色: the settings-window glass BASE tint. Defaults keep the stock
       // look (white light / deep navy dark); picking any preset or a custom
       // color tints the whole window glass in BOTH themes.
-      React.createElement("div", { className: "we-picker__row we-picker__accent-row" },
+      React.createElement("div", { className: "we-picker__row we-picker__accent-row we-picker__swatch-row" },
         React.createElement("span", { className: "we-picker__hint we-picker__label" }, "玻璃颜色"),
         GLASS_COLOR_PRESETS.map((hex) => React.createElement("button", {
           key: hex,
@@ -2136,7 +2136,7 @@ function WallpaperPicker(props) {
       sel.sidebarPresent && sel.sidebarGlass && [
       SliderRow("侧栏模糊", 0, 60, 1, sel.sidebarBlur, onSidebarBlur, sel.sidebarBlur + "px", "sb-blur"),
       SliderRow("侧栏透明度", 0, 60, 5, sel.sidebarAlpha, onSidebarAlpha, sel.sidebarAlpha + "%", "sb-alpha"),
-      React.createElement("div", { key: "sb-color", className: "we-picker__row we-picker__accent-row" },
+      React.createElement("div", { key: "sb-color", className: "we-picker__row we-picker__accent-row we-picker__swatch-row" },
         React.createElement("span", { className: "we-picker__hint we-picker__label" }, "侧栏玻璃颜色"),
         GLASS_COLOR_PRESETS.map((hex) => React.createElement("button", {
           key: hex,
@@ -2164,7 +2164,7 @@ function WallpaperPicker(props) {
     //    the CD-like look the author liked) vs the rewritten fixed-height
     //    cards that never overlap in older browsers. The vinyl record beside
     //    the selection stays in BOTH styles (here + modal head). ──
-    React.createElement("div", { className: "we-picker__row" },
+    React.createElement("div", { className: "we-picker__row we-picker__layout-row" },
       React.createElement("span", { className: "we-picker__hint we-picker__label" }, "紧凑布局"),
       React.createElement("label", { className: "we-picker__switch", title: "紧凑 CD 架：层叠 + 一页到底" },
         React.createElement("input", {
@@ -2202,7 +2202,7 @@ function WallpaperPicker(props) {
       ),
     ),
     // ── 当前壁纸: vinyl record beside the selection, in both card styles. ──
-    React.createElement("div", { className: "we-picker__section" },
+    React.createElement("div", { className: "we-picker__section we-picker__section--current" },
       React.createElement("div", { className: "we-picker__current" },
         React.createElement(VinylRecord, {
           cover: current && current.preview, type: current && current.type, url: current && current.media,
@@ -2464,7 +2464,7 @@ function WallpaperPicker(props) {
     ),
     // ── Playback controls (wallpaper-independent; the thumbnail grid lives in
     //    the modal above, so these stay within reach). ──
-    React.createElement("div", { className: "we-picker__row" },
+    React.createElement("div", { className: "we-picker__row we-picker__action-row" },
       React.createElement("button", {
         className: "we-picker__btn", type: "button",
         onClick: onTogglePlay, disabled: !sel.url,
@@ -2483,7 +2483,7 @@ function WallpaperPicker(props) {
     //    host into its plugin-managed directory and served through the same
     //    media/preview routes (read-A storage: survives restarts, no quota
     //    limits). Uploads merge into the inventory on the host side. ──
-    React.createElement("div", { className: "we-picker__section" },
+    React.createElement("div", { className: "we-picker__section we-picker__section--uploads" },
       React.createElement("div", { className: "we-picker__section-head" },
         React.createElement("span", { className: "we-picker__section-label" }, "自定义壁纸"),
       ),
@@ -2571,7 +2571,7 @@ function WallpaperPicker(props) {
     ),
     // ── 轮播列表: user-defined carousel lists, each with its own wallpaper
     //    set, interval and order. Fully client-side (localStorage). ──
-    React.createElement("div", { className: "we-picker__section" },
+    React.createElement("div", { className: "we-picker__section we-picker__section--rotation" },
       React.createElement("div", { className: "we-picker__section-head" },
         React.createElement("span", { className: "we-picker__section-label" }, "轮播列表"),
       ),
@@ -2721,7 +2721,7 @@ function WallpaperPicker(props) {
       sel.rotationGroupId && playableCount < 2 && React.createElement("span", { className: "we-picker__hint" }, "当前列表至少需要 2 个可播放壁纸"),
     ),
     ),
-    sel.id && React.createElement("div", { className: "we-picker__section" },
+    sel.id && React.createElement("div", { className: "we-picker__section we-picker__section--effects" },
       React.createElement("div", { className: "we-picker__section-head" },
         React.createElement("span", { className: "we-picker__section-label" }, "壁纸效果"),
       ),
@@ -2736,7 +2736,7 @@ function WallpaperPicker(props) {
       // 解码帧率上限（抽帧转码）：host 一次性把源视频重编码为上限帧率（时间线
       // 1.0x 正常速度，解码占用随帧率线性下降），与倍速解耦。首次转码需等待，
       // 播放中原片、转好自动切换；无 ffmpeg 自动回退原片。
-      sel.type === "video" && React.createElement("div", { className: "we-picker__row" },
+      sel.type === "video" && React.createElement("div", { className: "we-picker__row we-picker__choice-row" },
         React.createElement("span", { className: "we-picker__hint we-picker__label" }, "帧率上限"),
         FPS_CAP_VALUES.map((cap) =>
           React.createElement("button", {
@@ -2748,7 +2748,7 @@ function WallpaperPicker(props) {
         ),
       ),
       // Source metadata + transcode status (host moov probe / transcode lifecycle).
-      sel.type === "video" && sel.mediaInfo && React.createElement("span", { className: "we-picker__hint" },
+      sel.type === "video" && sel.mediaInfo && React.createElement("span", { className: "we-picker__hint we-picker__media-meta" },
         "源 " + sel.mediaInfo.width + "×" + sel.mediaInfo.height
           + (sel.mediaInfo.fps ? " · " + sel.mediaInfo.fps + "fps" : "")
           + (sel.mediaInfo.codec ? " · " + codecLabel(sel.mediaInfo.codec) : "")
@@ -2798,7 +2798,7 @@ function WallpaperPicker(props) {
       // Fit mode — applies to the CURRENT wallpaper whatever its type (WE
       // video/scene image and custom uploads alike; web/iframe wallpapers
       // have no object-fit). 覆盖=cover 填充=contain 居中=center 拉伸=fill
-      React.createElement("div", { className: "we-picker__row we-picker__fit-row" },
+      React.createElement("div", { className: "we-picker__row we-picker__choice-row we-picker__fit-row" },
         React.createElement("span", { className: "we-picker__hint we-picker__label" }, "适配"),
         ["cover", "contain", "center", "fill"].map((mode) => {
           const label = { cover: "覆盖", contain: "填充", center: "居中", fill: "拉伸" }[mode];
@@ -2825,7 +2825,7 @@ function WallpaperPicker(props) {
       // 遮挡暂停（借鉴 Wallpaper Engine 的「被遮挡时暂停」）：三个省电开关
       // 并排一行，说明放下一行 —— 最小化/切页、窗口失焦、电池供电时视频暂停、
       // 解码归零，回到界面 / 接通电源自动继续。
-      React.createElement("div", { className: "we-picker__row" },
+      React.createElement("div", { className: "we-picker__row we-picker__check-grid" },
         React.createElement("label", { className: "we-picker__rotation-toggle" },
           React.createElement("input", {
             type: "checkbox",
@@ -2851,12 +2851,12 @@ function WallpaperPicker(props) {
           "使用电池时暂停",
         ),
       ),
-      React.createElement("span", { className: "we-picker__hint" },
+      React.createElement("span", { className: "we-picker__hint we-picker__effect-note" },
         "类似 WE 的遮挡暂停：最小化、切到其它应用或使用电池供电时视频暂停、GPU 解码归零；回到界面 / 接通电源自动继续（网页壁纸仅随页面隐藏被浏览器节流）",
       ),
       ),
     ),
-    React.createElement("div", { className: "we-picker__row" },
+    React.createElement("div", { className: "we-picker__row we-picker__status-row" },
       React.createElement("span", { className: "we-picker__hint" },
         (group
           ? "列表「" + group.name + "」：" + group.wallpaperIds.length + " 项 · " + playableCount + " 可播放 · 每 " + group.interval + " 分钟 · " + (group.order === "random" ? "随机" : "顺序")
@@ -4118,6 +4118,203 @@ const CSS = `
     position: absolute; top: 4px; left: 4px; width: 18px; height: 18px;
     border-radius: 4px; background: rgba(0, 0, 0, 0.55); color: #fff;
     font-size: 12px; line-height: 18px; text-align: center;
+  }
+
+  /* ── UI refinement: quiet hierarchy, stable controls, stronger contrast ──
+     This layer intentionally stays inside the existing picker vocabulary. It
+     changes presentation only; state, media fallbacks, persistence, and the
+     mac free-sliding playback-rate control remain untouched. */
+  .we-picker {
+    gap: 14px;
+    color: var(--dsw-alias-label-primary, inherit);
+  }
+  .we-picker__card-shell {
+    padding: 18px;
+    border-radius: 16px;
+    background: var(--dsw-alias-bg-layer-3, rgba(128, 128, 128, 0.09));
+  }
+  .we-picker__card-head {
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 10px;
+    padding-bottom: 14px;
+  }
+  .we-picker__card-name { font-size: 16px; letter-spacing: -0.01em; }
+  .we-picker__card-head .we-picker__card-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 24px; min-height: 20px; padding: 0 7px;
+    border-radius: 999px;
+    color: var(--we-accent, #4f8cff);
+    background: color-mix(in srgb, var(--we-accent, #4f8cff) 14%, transparent);
+  }
+  .we-picker__card-desc {
+    flex-basis: 100%; margin-left: 0; margin-top: -2px;
+    color: var(--dsw-alias-label-secondary, #a7adbb);
+    line-height: 1.45; opacity: 0.9;
+    white-space: normal;
+  }
+  .we-picker__section {
+    gap: 10px;
+    min-width: 0;
+  }
+  .we-picker__section + .we-picker__section { padding-top: 14px; }
+  .we-picker__section-head { min-height: 22px; gap: 8px; }
+  .we-picker__section-label {
+    display: inline-flex; align-items: center; gap: 8px;
+    color: var(--dsw-alias-label-primary, inherit);
+    font-size: 0.78em; font-weight: 600; letter-spacing: 0.04em;
+    opacity: 0.82;
+  }
+  .we-picker__section-label::before {
+    content: ""; width: 3px; height: 14px; flex: 0 0 auto;
+    border-radius: 999px; background: var(--we-accent, #4f8cff);
+    box-shadow: 0 0 10px color-mix(in srgb, var(--we-accent, #4f8cff) 35%, transparent);
+  }
+  .we-picker__hint {
+    color: var(--dsw-alias-label-secondary, #a7adbb);
+    opacity: 0.9;
+    line-height: 1.4;
+  }
+  .we-picker__label {
+    min-width: 0;
+    color: var(--dsw-alias-label-secondary, #a7adbb);
+    opacity: 0.95;
+  }
+  .we-picker__value {
+    color: var(--dsw-alias-label-primary, inherit);
+    opacity: 0.95;
+  }
+  .we-picker__swatch-row {
+    flex-wrap: wrap;
+    row-gap: 8px;
+    padding: 7px 10px;
+    border: 1px solid var(--dsw-alias-border-l2, rgba(128, 128, 128, 0.26));
+    border-radius: 10px;
+    background: var(--dsw-alias-bg-layer-1, rgba(128, 128, 128, 0.06));
+  }
+  .we-picker__swatch-row .we-picker__label {
+    flex: 0 0 72px;
+  }
+  .we-picker__swatch {
+    width: 22px; height: 22px;
+  }
+  .we-picker__field-row {
+    display: grid;
+    grid-template-columns: minmax(76px, 88px) minmax(0, 1fr) 48px;
+    gap: 12px;
+    min-height: 30px;
+  }
+  .we-picker__field-row .we-picker__slider { min-width: 0; }
+  .we-picker__choice-row {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+  .we-picker__choice-row > .we-picker__label {
+    flex: 0 0 72px;
+  }
+  .we-picker__choice-row .we-picker__rate {
+    flex: 1 1 76px;
+    min-width: 76px;
+  }
+  .we-picker__fit-row > .we-picker__hint:last-child {
+    flex: 1 0 100%;
+    margin-left: 84px;
+    line-height: 1.45;
+  }
+  .we-picker__check-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    align-items: stretch;
+  }
+  .we-picker__check-grid > .we-picker__rotation-toggle {
+    min-width: 0;
+    padding: 8px 10px;
+    border: 1px solid var(--dsw-alias-border-l2, rgba(128, 128, 128, 0.26));
+    border-radius: 10px;
+    background: var(--dsw-alias-bg-layer-1, rgba(128, 128, 128, 0.05));
+    line-height: 1.35;
+  }
+  .we-picker__layout-row {
+    flex-wrap: wrap;
+    min-height: 34px;
+    padding: 7px 10px;
+    border: 1px solid var(--dsw-alias-border-l2, rgba(128, 128, 128, 0.26));
+    border-radius: 10px;
+    background: var(--dsw-alias-bg-layer-1, rgba(128, 128, 128, 0.05));
+  }
+  .we-picker__window-toggle {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 0.84em;
+    color: var(--dsw-alias-label-primary, inherit);
+  }
+  .we-picker__window-toggle + .we-picker__hint {
+    display: block;
+    margin: -4px 0 0 25px;
+    line-height: 1.45;
+  }
+  .we-picker__current {
+    gap: 14px;
+    padding: 12px;
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--we-accent, #4f8cff) 5%, var(--dsw-alias-bg-layer-1, rgba(128, 128, 128, 0.08)));
+  }
+  .we-picker__section--current .we-vinyl {
+    width: 96px; height: 96px;
+  }
+  .we-picker__current-title { font-size: 0.95em; font-weight: 600; }
+  .we-picker__current-meta { color: var(--dsw-alias-label-secondary, #a7adbb); opacity: 0.82; line-height: 1.45; }
+  .we-picker__current .we-picker__btn--primary {
+    min-width: 88px;
+    height: 30px; line-height: 28px;
+  }
+  .we-picker__action-row { justify-content: flex-end; padding-top: 2px; }
+  .we-picker__action-row .we-picker__btn { min-width: 64px; }
+  .we-picker__media-meta {
+    display: block;
+    padding: 2px 0 0 84px;
+    line-height: 1.5;
+  }
+  .we-picker__effect-note {
+    display: block;
+    padding-left: 84px;
+    line-height: 1.5;
+  }
+  .we-picker__status-row {
+    padding: 8px 10px;
+    border-radius: 9px;
+    background: var(--dsw-alias-bg-layer-1, rgba(128, 128, 128, 0.06));
+  }
+  .we-picker__btn,
+  .we-picker select,
+  .we-picker__text {
+    color: var(--dsw-alias-label-primary, #e5e7eb);
+  }
+  .we-picker__btn:hover,
+  .we-picker select:hover,
+  .we-picker__text:focus {
+    border-color: color-mix(in srgb, var(--we-accent, #4f8cff) 52%, var(--dsw-alias-border-l2, rgba(128, 128, 128, 0.35)));
+    background: color-mix(in srgb, var(--we-accent, #4f8cff) 10%, transparent);
+  }
+  .we-picker__card-title {
+    padding: 8px 7px 5px;
+    font-size: 0.76em; font-weight: 500;
+    background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.78) 100%);
+  }
+
+  @media (max-width: 560px) {
+    .we-picker__card-shell { padding: 14px; }
+    .we-picker__card-desc { white-space: normal; }
+    .we-picker__current { flex-wrap: wrap; }
+    .we-picker__current .we-picker__btn--primary {
+      flex: 1 1 120px;
+      margin-left: 110px;
+    }
+    .we-picker__check-grid { grid-template-columns: 1fr; }
+    .we-picker__fit-row > .we-picker__hint:last-child,
+    .we-picker__media-meta,
+    .we-picker__effect-note { margin-left: 0; padding-left: 0; }
+    .we-picker__switch--edge { flex-basis: 100%; margin-left: 0 !important; }
   }
 
   /* ── Rope dock: chibi pull-cord + glass repo drawer ────────────────────────
