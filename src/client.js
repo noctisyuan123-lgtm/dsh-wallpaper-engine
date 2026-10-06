@@ -313,6 +313,9 @@ async function loadInventory() {
       total: data.total || 0,
       portableCount: data.portableCount || 0,
       playlists: Array.isArray(data.playlists) ? data.playlists : [],
+      projectWallpapers: Array.isArray(data.projectWallpapers) ? data.projectWallpapers : [],
+      projectOnly: data.projectOnly === true,
+      projectScrim: Number.isFinite(data.projectScrim) ? clampNum(data.projectScrim, 0, 1, DEFAULTS.scrim) : null,
       error: null,
     };
   } catch (err) {
@@ -1072,7 +1075,7 @@ function codecLabel(codec) {
 function syncLayers() {
   // 1. Wallpaper element.
   const existing = document.getElementById(LAYER_ID);
-  if (selection.url) {
+  if (selection.url && !selection.inventory.projectOnly) {
     const wantKey = selection.type + "\u0000" + selection.url;
     const gotKey = existing && existing.dataset.weKey;
     if (existing && gotKey !== wantKey) existing.remove();
@@ -1102,7 +1105,7 @@ function syncLayers() {
 
   // 2. Scrim element (always present while a wallpaper is active).
   const scrim = document.getElementById(SCRIM_ID);
-  if (selection.url) {
+  if (selection.url && !selection.inventory.projectOnly) {
     if (!scrim) {
       const s = document.createElement("div");
       s.id = SCRIM_ID;
@@ -1163,7 +1166,7 @@ function applyEffects() {
   //   (nav + every native section) becomes liquid glass with the accent +
   //   transparency above. Toggled instantly via a body attribute the scoped
   //   CSS below keys on; off restores the shell's stock look.
-  if (selection.glassWindow) document.body.setAttribute("data-we-glass-window", "on");
+  if (selection.glassWindow && !selection.inventory.projectOnly) document.body.setAttribute("data-we-glass-window", "on");
   else document.body.removeAttribute("data-we-glass-window");
 
   // Scrim immediacy: some composited/kiosk environments do not repaint a
@@ -2192,7 +2195,243 @@ function WallpaperPickerSection() {
 }
 
 // ── Styles ──────────────────────────────────────────────────────────────────
+// The shell's root hooks supply the selected Session cwd and panel. Keep this
+// background inside the centre column so sidebar, rightbar, global selection,
+// and global carousel settings are completely independent.
+function projectWallpaperFor(cwd) {
+  if (typeof cwd !== "string" || !cwd.startsWith("/")) return null;
+  const path = cwd.replace(/\/+$/, "") || "/";
+  return (selection.inventory.projectWallpapers || [])
+    .filter((w) => {
+      if (typeof w.cwd !== "string" || typeof w.media !== "string") return false;
+      const root = w.cwd.replace(/\/+$/, "") || "/";
+      return path === root || path.startsWith(root === "/" ? root : root + "/");
+    })
+    .sort((a, b) => b.cwd.length - a.cwd.length)[0] || null;
+}
+
+function mountProjectWallpaper(wallpaper, scrim) {
+  let target = null;
+  let layer = null;
+  let image = null;
+  let resizeObserver = null;
+  let disposed = false;
+  const nativeLabels = ["primary", "primary-dimmed", "primary-bluish", "secondary", "tertiary", "caption", "dimmed"];
+  const ownedProperties = nativeLabels.map(name => "--we-native-label-" + name)
+    .concat(nativeLabels.map(name => "--we-project-label-" + name), ["--we-project-text-outline"]);
+  const linear = value => value <= 0.04045 ? value / 12.92 : Math.pow((value + 0.055) / 1.055, 2.4);
+  const updateContrast = () => {
+    if (target) document.body.style.setProperty("--we-persona-left", target.getBoundingClientRect().left + "px");
+    if (disposed || !target || !image?.naturalWidth) return;
+    try {
+      // Match the centred cover crop actually visible at this window size.
+      const { width, height } = target.getBoundingClientRect();
+      if (!width || !height) return;
+      const canvas = document.createElement("canvas");
+      canvas.width = canvas.height = 32;
+      const context = canvas.getContext("2d", { willReadFrequently: true });
+      if (!context) return;
+      const scale = Math.max(width / image.naturalWidth, height / image.naturalHeight);
+      const visibleWidth = width / scale, visibleHeight = height / scale;
+      context.drawImage(image, (image.naturalWidth - visibleWidth) / 2,
+        (image.naturalHeight - visibleHeight) / 2, visibleWidth, visibleHeight, 0, 0, 32, 32);
+      const pixels = context.getImageData(0, 0, 32, 32).data;
+      let luminance = 0;
+      for (let i = 0; i < pixels.length; i += 4) {
+        const alpha = pixels[i + 3] / 255;
+        const channel = j => linear(((pixels[i + j] * alpha + 24 * (1 - alpha)) / 255) * (1 - scrim));
+        luminance += 0.2126 * channel(0) + 0.7152 * channel(1) + 0.0722 * channel(2);
+      }
+      luminance /= pixels.length / 4;
+      // Choose the foreground with the larger contrast ratio after the scrim.
+      const darkInk = 0.009, lightInk = 0.955;
+      const darkContrast = (Math.max(luminance, darkInk) + 0.05) / (Math.min(luminance, darkInk) + 0.05);
+      const lightContrast = (Math.max(luminance, lightInk) + 0.05) / (Math.min(luminance, lightInk) + 0.05);
+      const dark = darkContrast >= lightContrast;
+      const palette = dark
+        ? ["#101827", "#172131", "#174579", "#1e2a3c", "#29384b", "#334255", "#263448"]
+        : ["#f8fafc", "#eef2f7", "#b9d8ff", "#e8eef6", "#dce5f0", "#d2deed", "#e1e9f3"];
+      nativeLabels.forEach((name, i) => target.style.setProperty("--we-project-label-" + name, palette[i]));
+      target.style.setProperty("--we-project-text-outline", dark ? "rgba(255,255,255,0.72)" : "rgba(0,0,0,0.68)");
+      target.setAttribute("data-we-project-tone", dark ? "dark-ink" : "light-ink");
+    } catch { /* Keep the native theme if image sampling is unavailable. */ }
+  };
+  const clear = () => {
+    if (resizeObserver) resizeObserver.disconnect();
+    resizeObserver = null;
+    if (layer) layer.remove();
+    if (target) {
+      target.classList.remove("we-project-chat");
+      target.classList.remove("we-project-chat--readable");
+      target.removeAttribute("data-we-project-tone");
+      ownedProperties.forEach(name => target.style.removeProperty(name));
+    }
+    document.body.removeAttribute("data-we-persona");
+    document.body.style.removeProperty("--we-persona-left");
+    document.body.style.removeProperty("--we-persona-sidebar-fill");
+    target = layer = null;
+  };
+  const sync = () => {
+    const center = document.querySelector('[class*="_frame"] > [class*="_centerCol"]');
+    if (center === target) return;
+    clear();
+    if (!center || !wallpaper) return;
+    target = center;
+    // Read the native sidebar fill without the global wallpaper overrides.
+    const active = document.body.hasAttribute?.(ACTIVE_ATTR);
+    document.body.removeAttribute(ACTIVE_ATTR);
+    const sidebar = document.querySelector('[class*="_frame"] > [class*="_sidebarCol"]');
+    if (sidebar && typeof window.getComputedStyle === "function") {
+      document.body.style.setProperty("--we-persona-sidebar-fill", window.getComputedStyle(sidebar).getPropertyValue("--dsw-specific-sidebar-fill"));
+    }
+    if (active) document.body.setAttribute(ACTIVE_ATTR, "on");
+    document.body.setAttribute("data-we-persona", "on");
+    document.body.style.setProperty("--we-persona-left", center.getBoundingClientRect().left + "px");
+    if (typeof window.getComputedStyle === "function") {
+      const native = window.getComputedStyle(center);
+      nativeLabels.forEach(name => target.style.setProperty("--we-native-label-" + name,
+        native.getPropertyValue("--dsw-alias-label-" + name)));
+    }
+    target.classList.add("we-project-chat");
+    if (wallpaper.readability === true) target.classList.add("we-project-chat--readable");
+    layer = document.createElement("div");
+    layer.className = "we-project-chat__wallpaper";
+    layer.setAttribute("aria-hidden", "true");
+    const shade = "rgba(0,0,0," + scrim + ")";
+    layer.style.backgroundImage = "linear-gradient(" + shade + "," + shade + "),url(" + JSON.stringify(wallpaper.media) + ")";
+    target.appendChild(layer);
+    if (typeof ResizeObserver === "function") {
+      resizeObserver = new ResizeObserver(updateContrast);
+      resizeObserver.observe(target);
+    }
+    updateContrast();
+  };
+  if (wallpaper && typeof Image === "function") {
+    image = new Image();
+    image.onload = updateContrast;
+    image.src = wallpaper.media;
+  }
+  sync();
+  const observer = typeof MutationObserver === "function" ? new MutationObserver(sync) : null;
+  if (observer) observer.observe(document.body, { childList: true, subtree: true });
+  return () => {
+    disposed = true;
+    if (image) image.onload = image.onerror = null;
+    if (observer) observer.disconnect();
+    clear();
+  };
+}
+
+function ProjectWallpaperBridge({ useSessions, usePanelInfo }) {
+  const cwd = useSessions((state) => {
+    // Desktop uses main-view retention; older CLI/web builds expose current.
+    const current = state.current !== undefined ? state.byId[state.current]
+      : Object.values(state.byId).find((session) => (session.retainedBy?.mainView || 0) > 0);
+    return current?.cwd;
+  });
+  const conversation = usePanelInfo((info) => info.activePanelId === null);
+  const state = useStore();
+  const wallpaper = conversation ? projectWallpaperFor(cwd) : null;
+  const scrim = state.inventory.projectScrim ?? state.scrim;
+  React.useEffect(() => mountProjectWallpaper(wallpaper, scrim), [wallpaper?.media, wallpaper?.readability, scrim]);
+  return null;
+}
+
 const CSS = `
+  /* Persona conversations retain their native sidebar; other projects keep
+     the user's global wallpaper across the whole window. */
+  body[data-we-persona] > .we-layer,
+  body[data-we-persona] > .we-scrim {
+    clip-path: inset(0 0 0 var(--we-persona-left, 0px));
+  }
+  body[data-we-persona] [class*="_frame"] > [class*="_sidebarCol"] {
+    --dsw-specific-sidebar-fill: var(--we-persona-sidebar-fill);
+  }
+
+  .we-project-chat {
+    position: relative;
+    isolation: isolate;
+    --dsw-alias-bg-base: transparent;
+  }
+  .we-project-chat[data-we-project-tone] {
+    --dsw-alias-label-primary: var(--we-project-label-primary);
+    --dsw-alias-label-primary-dimmed: var(--we-project-label-primary-dimmed);
+    --dsw-alias-label-primary-bluish: var(--we-project-label-primary-bluish);
+    --dsw-alias-label-secondary: var(--we-project-label-secondary);
+    --dsw-alias-label-tertiary: var(--we-project-label-tertiary);
+    --dsw-alias-label-caption: var(--we-project-label-caption);
+    --dsw-alias-label-dimmed: var(--we-project-label-dimmed);
+    color: var(--we-project-label-primary);
+    text-shadow: 0 1px 2px var(--we-project-text-outline);
+  }
+  /* Process text and message metadata sit directly on detailed artwork. A whole-image average
+     cannot choose its local contrast, and cover crops change on sidebar resize.
+     Keep these small labels white with a tight dark edge in both layouts. */
+  .we-project-chat[data-we-project-tone] :is(
+      [data-chat-group-part="reasoning"], [data-chat-flow-kind="turn-process"], [data-turn-process],
+      [data-turn-tail] [data-clock], [data-clock="start"]) {
+    --dsw-alias-label-primary: #f8fafc;
+    --dsw-alias-label-primary-dimmed: #eef2f7;
+    --dsw-alias-label-primary-bluish: #b9d8ff;
+    --dsw-alias-label-secondary: #e8eef6;
+    --dsw-alias-label-tertiary: #e8eef6;
+    --dsw-alias-label-caption: #e1e9f3;
+    --dsw-alias-label-dimmed: #e1e9f3;
+    color: #f8fafc;
+    text-shadow: 0 1px 1px rgba(0,0,0,0.9);
+  }
+  /* These surfaces have their own fill, so retain their native foreground.
+     The trajectory view is identified by its authored overlay attribute and
+     direct toolbar, not a generated class hash or translated aria-label.
+     Syntax highlighting and semantic warning/error colors remain intact. */
+  .we-project-chat[data-we-project-tone] :is([data-composer-card], [data-composer-stats],
+      [class*="_bubble"], [class*="_toBottom"], pre, [data-code-block-banner],
+      [data-conversation-composer-overlay]:has(> [role="toolbar"])) {
+    --dsw-alias-label-primary: var(--we-native-label-primary);
+    --dsw-alias-label-primary-dimmed: var(--we-native-label-primary-dimmed);
+    --dsw-alias-label-primary-bluish: var(--we-native-label-primary-bluish);
+    --dsw-alias-label-secondary: var(--we-native-label-secondary);
+    --dsw-alias-label-tertiary: var(--we-native-label-tertiary);
+    --dsw-alias-label-caption: var(--we-native-label-caption);
+    --dsw-alias-label-dimmed: var(--we-native-label-dimmed);
+    text-shadow: none;
+  }
+  /* Opt-in per project. Only response rows receive
+     a reading surface; composer/code fills retain their own native theme. */
+  .we-project-chat--readable :is(
+      [data-chat-flow-kind="assistant-step"][data-chat-group-part="response"],
+      [data-chat-flow-kind="assistant-step"]:not([data-chat-group-part])) {
+    --dsw-alias-label-primary: #101827;
+    --dsw-alias-label-primary-dimmed: #172131;
+    --dsw-alias-label-primary-bluish: #174579;
+    --dsw-alias-label-secondary: #1e2a3c;
+    --dsw-alias-label-tertiary: #29384b;
+    --dsw-alias-label-caption: #334255;
+    --dsw-alias-label-dimmed: #263448;
+    color: #101827;
+    text-shadow: none;
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+  }
+  .we-project-chat--readable :is(
+      [data-chat-flow-kind="assistant-step"][data-chat-group-part="response"],
+      [data-chat-flow-kind="assistant-step"]:not([data-chat-group-part])) {
+    box-sizing: border-box;
+    background: rgba(248,245,250,0.58);
+    border: 1px solid rgba(255,255,255,0.38);
+    border-radius: 16px;
+    padding: 14px 18px;
+    box-shadow: 0 2px 12px rgba(16,24,39,0.06);
+  }
+  .we-project-chat__wallpaper {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-size: 100% 100%, cover;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
   /* Wallpaper layer: a fixed child of <body>, sunk BELOW the app frame. */
   .we-layer { position: fixed; inset: 0; z-index: -2; overflow: hidden; pointer-events: none; }
   /* Blurring via CSS filter darkens/thins the edges, so the layer is scaled up
@@ -3064,6 +3303,10 @@ function apply(ctx) {
   //    in dsh-web-ui-all: its own nav entry, rendered inside the panel content
   //    column). The picker renders inside the liquid-glass card shell.
   if (ctx.slots) {
+    ctx.slots.inject("shell.overlay", () => ctx.slots.register(
+      { name: "shell.overlay", id: "wallpaper-engine-project-background", order: -100 },
+      ProjectWallpaperBridge,
+    ));
     ctx.slots.inject("settings.section", () =>
       ctx.slots.register(
         { name: "settings.section", id: "wallpaper-engine", order: 500, label: "Wallpaper Engine" },

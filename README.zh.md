@@ -183,3 +183,34 @@ npm run verify     # 物化生成的 bundle 并断言其导出
 编辑 `src/client.js` 后运行 `npm run build`，不要手改 `lib/client.js`。`npm install`/`pnpm install` 会自动触发 `prepare` → `build`，因此全新 checkout 总是带最新的 `lib/client.js`。
 
 host↔browser 的契约是同源 HTTP，两端可独立开发：改 host 后重启 `dsh web` 生效，改 client 则先 `npm run build` 再重启 `dsh web`。
+# 项目对话壁纸（本地配置）
+
+在插件数据目录 `~/.dsh-wallpaper-engine/config.json` 的 `projectWallpapers`
+中设置项目绝对路径到已上传图片 ID 的映射。图片仍由现有媒体路由提供：
+
+```json
+{
+  "projectWallpapers": {
+    "/absolute/project/path": "up-example"
+  },
+  "projectOnly": true,
+  "projectScrim": 0.08,
+  "projectReadability": {
+    "/absolute/project/path": true
+  }
+}
+```
+
+当前会话目录匹配项目或其子目录时，图片覆盖中间对话区域（包括顶栏）。更深层的
+项目配置优先；切换到其他项目或全局面板时移除覆盖。项目图片以 `cover` 居中铺满对话区域及顶栏，按窗口比例裁剪边缘，不留空。
+`projectOnly: true` 只启用项目对话壁纸，不应用全局壁纸、轮播和设置窗玻璃效果，
+侧边栏保持原生主题。省略该选项时保留既有全局功能。配置和图片在重启后保留。
+
+`projectScrim` 设置项目图片的暗化遮罩（0–1）；省略时跟随插件的暗化滑块。
+对话和顶栏文字按当前窗口实际显示的图片区域、遮罩后的亮度自动选择深色或
+浅色字，窗口大小或遮罩变化时重新计算。输入框、用户气泡、代码块等有独立
+底色的区域保留原生主题字色。
+
+`projectReadability` 按项目路径开启阅读底板：仅回复区使用约 58% 不透明的浅色磨砂底板，
+以 12px 模糊其背后的图片；顶栏不加底板。底板字色固定为深色，独立代码和
+输入框保持原生主题。未配置的项目不添加底板。

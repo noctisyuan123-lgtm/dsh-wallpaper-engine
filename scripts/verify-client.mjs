@@ -121,7 +121,7 @@ const effects = [];
 const pickerRenders = [];
 const slots = {
   inject: (key, cb) => cb(),
-  register: (opts, render) => { registrations.push({ key: opts.name, id: opts.id, label: opts.label, order: opts.order }); pickerRenders.push(render); },
+  register: (opts, render) => { registrations.push({ key: opts.name, id: opts.id, label: opts.label, order: opts.order }); if (opts.name === 'settings.section') pickerRenders.push(render); },
 };
 const ctx = { slots, effect(fn) { effects.push(fn); fn(); return fn; } };
 
